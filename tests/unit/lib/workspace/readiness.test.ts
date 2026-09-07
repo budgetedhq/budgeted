@@ -15,7 +15,7 @@ describe("workspace readiness", () => {
         expect(readiness).toEqual({
             sectionId: "accounts",
             status: "empty",
-            message: "Add your first account to start using the workspace.",
+            message: "Add your first account to start using the ledger.",
             primaryActionHref: undefined,
             primaryActionLabel: undefined,
         });

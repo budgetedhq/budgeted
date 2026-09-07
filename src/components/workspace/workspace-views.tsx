@@ -2327,7 +2327,7 @@ export function AccountsWorkspace() {
             {readiness.status !== "ready" ? (
                 <EmptyStatePanel
                     readiness={readiness}
-                    title="Accounts need your first saved register entry."
+                    title="Transactions need an account first."
                 />
             ) : null}
 

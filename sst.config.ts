@@ -27,19 +27,15 @@ async function getLocalDevConfig() {
         string,
         string
     >;
-    const environmentAssignments = Object.entries(devEnvironment)
-        .map(([name, value]) => `${name}=${shellQuote(value)}`)
-        .join(" ");
 
     return {
         dev: {
-            command: `${environmentAssignments} ${buildNextDevArgs([
-                "pnpm",
-                "dev:turbo",
-                "--",
+            command: buildNextDevArgs([
+                "node",
+                "./scripts/dev-turbo.mjs",
             ], options)
                 .map(shellQuote)
-                .join(" ")}`,
+                .join(" "),
             url: formatDevServerUrl(options),
         },
         environment: devEnvironment,

@@ -58,7 +58,7 @@ export function resolveWorkspaceReadiness(
                 return createReadiness(
                     "accounts",
                     "empty",
-                    "Add your first account to start using the workspace.",
+                    "Add your first account to start using the ledger.",
                 );
             }
 
