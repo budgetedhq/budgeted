@@ -21,6 +21,7 @@ import {
     faTriangleExclamation,
     faUsers,
     faV,
+    faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { AccountsTable } from "@/components/accounts/accounts-table";
@@ -104,6 +105,7 @@ import { createWorkspaceMutationId } from "@/lib/workspace/mutation-id";
 import {
     controlClassNames,
     getMoneyToneClassName,
+    surfaceClassNames,
     typographyClassNames,
 } from "@/lib/theme/theme-recipes";
 import {
@@ -325,6 +327,89 @@ function DashboardSectionLink({
                 />
             </Link>
         </div>
+    );
+}
+
+const dashboardWelcomeSteps = [
+    {
+        description:
+            "Add the places where you keep and spend money. A Cash account is ready for you to use or edit.",
+        href: "/accounts",
+        icon: faWallet,
+        label: "Create accounts",
+    },
+    {
+        description:
+            "Shape the starter expense categories around the way you want to plan your spending.",
+        href: "/global-budget",
+        icon: faListCheck,
+        label: "Create your budget plan",
+    },
+    {
+        description:
+            "Record your first purchase, deposit, or transfer to bring your dashboard to life.",
+        href: "/transactions",
+        icon: faReceipt,
+        label: "Add your first transaction",
+    },
+] as const;
+
+function DashboardWelcome() {
+    return (
+        <section
+            aria-labelledby="dashboard-welcome-heading"
+            className={`overflow-hidden ${surfaceClassNames.panelStrong}`}
+        >
+            <div className="border-b border-[var(--color-border)] p-6 sm:p-8">
+                <p className={typographyClassNames.eyebrow}>Welcome</p>
+                <h1
+                    className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-3xl"
+                    id="dashboard-welcome-heading"
+                >
+                    Welcome to Budgeted
+                </h1>
+                <p
+                    className={`mt-3 max-w-2xl text-sm leading-6 sm:text-base ${typographyClassNames.mutedBody}`}
+                >
+                    Your ledger is ready. Follow these steps to turn it into a
+                    useful view of your money.
+                </p>
+            </div>
+
+            <ol className="grid divide-y divide-[var(--color-border)]">
+                {dashboardWelcomeSteps.map((step, index) => (
+                    <li key={step.href}>
+                        <Link
+                            className="group grid gap-4 p-5 transition hover:bg-[var(--color-panel-elevated)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-accent-ring)] sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:p-6"
+                            href={step.href}
+                        >
+                            <span className="flex size-10 items-center justify-center border border-[var(--color-border)] bg-[var(--color-panel)] text-[var(--color-accent-ink)]">
+                                <FontAwesomeIcon
+                                    aria-hidden="true"
+                                    className="size-4"
+                                    icon={step.icon}
+                                />
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block text-base font-semibold text-[var(--color-ink)]">
+                                    {index + 1}. {step.label}
+                                </span>
+                                <span
+                                    className={`mt-1 block text-sm leading-6 ${typographyClassNames.mutedBody}`}
+                                >
+                                    {step.description}
+                                </span>
+                            </span>
+                            <FontAwesomeIcon
+                                aria-hidden="true"
+                                className="hidden size-3 text-[var(--color-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--color-accent-ink)] sm:block"
+                                icon={faChevronRight}
+                            />
+                        </Link>
+                    </li>
+                ))}
+            </ol>
+        </section>
     );
 }
 
@@ -1183,6 +1268,15 @@ export function DashboardWorkspace({
                 pending.transactionId,
             );
         }
+    }
+
+    if (!isLoadingLedgerTransactions && ledgerTransactions.length === 0) {
+        return (
+            <div className="grid gap-8">
+                <PageHeader breadcrumbs={[{ label: "Home" }]} />
+                <DashboardWelcome />
+            </div>
+        );
     }
 
     return (

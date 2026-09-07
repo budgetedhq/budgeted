@@ -26,6 +26,7 @@ import {
 } from "@/features/workspace/server/workspace-sync-service";
 import { createEmptyWorkspaceSnapshotRecords } from "@/lib/workspace/snapshot-utils";
 import { createWorkspaceUpsertChange } from "@/features/workspace/server/workspace-change-builder";
+import type { WorkspaceSnapshotRecords } from "@/lib/workspace/sync-types";
 
 export const DEFAULT_LEDGER_ID = "default";
 
@@ -112,10 +113,106 @@ async function persistActiveLedgerId(userId: string, ledgerId: string) {
         .go();
 }
 
-async function persistNewLedger(record: LedgerRecord) {
+type NewLedgerStarterRecords = Pick<
+    WorkspaceSnapshotRecords,
+    "accounts" | "budgetCategories" | "budgetGroups"
+>;
+
+function createEmptyLedgerStarterRecords(): NewLedgerStarterRecords {
+    return {
+        accounts: [],
+        budgetCategories: [],
+        budgetGroups: [],
+    };
+}
+
+function createInitialLedgerStarterRecords(
+    ledgerId: string,
+    now: string,
+): NewLedgerStarterRecords {
+    const accountId = ulid();
+    const groupId = ulid();
+    const categoryNames = [
+        "Groceries",
+        "Dining out",
+        "Transportation",
+        "Utilities",
+    ];
+
+    return {
+        accounts: [
+            {
+                accountId,
+                accountType: "cash",
+                balanceCents: 0,
+                createdAt: now,
+                ledgerAccountId: `acct_${accountId}`,
+                ledgerId,
+                name: "Cash",
+                openedOn: now.slice(0, 10),
+                openingBalanceCents: 0,
+                updatedAt: now,
+            },
+        ],
+        budgetGroups: [
+            {
+                createdAt: now,
+                groupId,
+                ledgerId,
+                name: "Expenses",
+                sortOrder: 0,
+                status: "active",
+                updatedAt: now,
+            },
+        ],
+        budgetCategories: categoryNames.map((name, sortOrder) => {
+            const categoryId = ulid();
+
+            return {
+                allocationCadence: "monthly",
+                categoryId,
+                categoryType: "spending",
+                createdAt: now,
+                defaultAssignedCents: 0,
+                groupId,
+                isIncomeCategory: false,
+                ledgerAccountId: `cat_${categoryId}`,
+                ledgerId,
+                name,
+                sortOrder,
+                status: "active",
+                updatedAt: now,
+            };
+        }),
+    };
+}
+
+function toPersistedStarterAccount(
+    account: WorkspaceSnapshotRecords["accounts"][number],
+) {
+    return {
+        accountId: account.accountId,
+        accountType: account.accountType,
+        createdAt: account.createdAt,
+        ledgerAccountId: account.ledgerAccountId,
+        ledgerId: account.ledgerId,
+        name: account.name,
+        openedOn: account.openedOn,
+        openingBalanceCents: account.openingBalanceCents,
+        updatedAt: account.updatedAt,
+    };
+}
+
+async function persistNewLedger(
+    record: LedgerRecord,
+    starterRecords = createEmptyLedgerStarterRecords(),
+) {
     const { service } = getBudgetedSchema();
     const records = createEmptyWorkspaceSnapshotRecords();
     records.ledgers = [record];
+    records.accounts = starterRecords.accounts;
+    records.budgetCategories = starterRecords.budgetCategories;
+    records.budgetGroups = starterRecords.budgetGroups;
     const workspaceState = createWorkspaceStateFromRecords({
         ledgerId: record.ledgerId,
         oldestRetainedWorkspaceRevision: record.workspaceRevision,
@@ -125,12 +222,27 @@ async function persistNewLedger(record: LedgerRecord) {
     });
 
     await service.transaction
-        .write((entities) => [
-            entities.ledgers.put(record).commit(),
-            entities.workspaceStates
-                .put(toWorkspaceStateRecord(workspaceState))
-                .commit(),
-        ])
+        .write((entities) => {
+            const accountWrites = starterRecords.accounts.map((account) =>
+                entities.accounts
+                    .put(toPersistedStarterAccount(account))
+                    .commit(),
+            );
+
+            return [
+                entities.ledgers.put(record).commit(),
+                ...accountWrites,
+                ...starterRecords.budgetGroups.map((group) =>
+                    entities.budgetGroups.put(group).commit(),
+                ),
+                ...starterRecords.budgetCategories.map((category) =>
+                    entities.budgetCategories.put(category).commit(),
+                ),
+                entities.workspaceStates
+                    .put(toWorkspaceStateRecord(workspaceState))
+                    .commit(),
+            ];
+        })
         .go();
 }
 
@@ -168,7 +280,10 @@ export async function ensureDefaultLedger() {
         workspaceSyncProtocolVersion: 2,
     } satisfies LedgerRecord;
 
-    await persistNewLedger(record);
+    await persistNewLedger(
+        record,
+        createInitialLedgerStarterRecords(record.ledgerId, now),
+    );
 
     return record;
 }

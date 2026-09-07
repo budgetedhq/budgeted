@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+    accountPut: vi.fn(),
+    budgetCategoryPut: vi.fn(),
+    budgetGroupPut: vi.fn(),
     findUserAccountById: vi.fn(),
     documentClientSend: vi.fn(),
     ledgerDelete: vi.fn(),
@@ -33,6 +36,15 @@ vi.mock("@/lib/db/resource", () => ({
 vi.mock("@/lib/db/schema", () => ({
     getBudgetedSchema: () => ({
         entities: {
+            accounts: {
+                put: mocks.accountPut,
+            },
+            budgetCategories: {
+                put: mocks.budgetCategoryPut,
+            },
+            budgetGroups: {
+                put: mocks.budgetGroupPut,
+            },
             ledgers: {
                 delete: mocks.ledgerDelete,
                 get: mocks.ledgerGet,
@@ -117,8 +129,26 @@ describe("ledger service", () => {
         mocks.workspaceStatePut.mockImplementation((record) => ({
             commit: () => ({ record }),
         }));
+        mocks.accountPut.mockImplementation((record) => ({
+            commit: () => ({ record }),
+        }));
+        mocks.budgetCategoryPut.mockImplementation((record) => ({
+            commit: () => ({ record }),
+        }));
+        mocks.budgetGroupPut.mockImplementation((record) => ({
+            commit: () => ({ record }),
+        }));
         mocks.serviceTransactionWrite.mockImplementation((write) => {
             const items = write({
+                accounts: {
+                    put: mocks.accountPut,
+                },
+                budgetCategories: {
+                    put: mocks.budgetCategoryPut,
+                },
+                budgetGroups: {
+                    put: mocks.budgetGroupPut,
+                },
                 ledgers: {
                     put: (record: LedgerRecord) => {
                         ledgers.set(record.ledgerId, record);
@@ -205,6 +235,39 @@ describe("ledger service", () => {
             isDefault: false,
             workspaceId: "global",
         });
+        expect(mocks.accountPut).toHaveBeenCalledWith(
+            expect.objectContaining({
+                accountType: "cash",
+                ledgerId: DEFAULT_LEDGER_ID,
+                name: "Cash",
+                openingBalanceCents: 0,
+            }),
+        );
+        expect(mocks.budgetGroupPut).toHaveBeenCalledWith(
+            expect.objectContaining({
+                ledgerId: DEFAULT_LEDGER_ID,
+                name: "Expenses",
+                sortOrder: 0,
+                status: "active",
+            }),
+        );
+        expect(mocks.budgetCategoryPut).toHaveBeenCalledTimes(4);
+        expect(
+            mocks.budgetCategoryPut.mock.calls.map(([category]) => category.name),
+        ).toEqual([
+            "Groceries",
+            "Dining out",
+            "Transportation",
+            "Utilities",
+        ]);
+        const initialWorkspaceState = mocks.workspaceStatePut.mock.calls[0]?.[0];
+        expect(JSON.parse(initialWorkspaceState.entityCountsJson)).toMatchObject({
+            account: 1,
+            budgetCategory: 4,
+            budgetGroup: 1,
+            ledger: 1,
+            transaction: 0,
+        });
     });
 
     it("creates a new global ledger without recreating a missing Initial ledger", async () => {
@@ -220,6 +283,9 @@ describe("ledger service", () => {
             ledgerId: ledger.ledgerId,
             workspaceId: "global",
         });
+        expect(mocks.accountPut).not.toHaveBeenCalled();
+        expect(mocks.budgetGroupPut).not.toHaveBeenCalled();
+        expect(mocks.budgetCategoryPut).not.toHaveBeenCalled();
     });
 
     it("resolves the saved active ledger scope when a non-default ledger is active", async () => {

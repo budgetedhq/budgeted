@@ -299,6 +299,30 @@ describe("dashboard workspace", () => {
         });
     });
 
+    it("welcomes a new user instead of showing reporting sections", () => {
+        const existingTransactions = mocks.snapshot.transactions.splice(0);
+
+        render(<DashboardWorkspace initialPeriodId="2026-05" />);
+
+        expect(
+            screen.getByRole("heading", { name: "Welcome to Budgeted" }),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByRole("tablist", { name: "Home sections" }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getByRole("link", { name: /Create accounts/ }),
+        ).toHaveAttribute("href", "/accounts");
+        expect(
+            screen.getByRole("link", { name: /Create your budget plan/ }),
+        ).toHaveAttribute("href", "/global-budget");
+        expect(
+            screen.getByRole("link", { name: /Add your first transaction/ }),
+        ).toHaveAttribute("href", "/transactions");
+
+        mocks.snapshot.transactions.push(...existingTransactions);
+    });
+
     it("shows over-budget categories and ranks activity across the ledger", () => {
         mocks.snapshot.transactions.push(
             {
@@ -1395,7 +1419,28 @@ describe("dashboard workspace", () => {
     });
 
     it("shows an all-caught-up message when no uncategorized transactions remain", () => {
-        mocks.snapshot.transactions.splice(0);
+        mocks.snapshot.transactions.splice(
+            0,
+            mocks.snapshot.transactions.length,
+            {
+                displayAmountCents: -1_250,
+                kind: "standard",
+                occurredAt: "2026-05-02T00:00:00.000Z",
+                payee: "Categorized merchant",
+                referenceAccountId: "checking",
+                status: "entered",
+                transactionId: "categorized",
+                updatedAt: "2026-05-02T00:00:00.000Z",
+                lines: [
+                    {
+                        amountCents: 1_250,
+                        categoryId: "groceries",
+                        toAccountId: "checking",
+                        transactionId: "categorized",
+                    },
+                ],
+            } as never,
+        );
 
         render(<DashboardWorkspace initialPeriodId="2026-05" />);
         selectDashboardTab("Uncategorized");
