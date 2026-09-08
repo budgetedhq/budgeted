@@ -307,6 +307,23 @@ describe("dashboard workspace", () => {
         expect(
             screen.getByRole("heading", { name: "Welcome to Budgeted" }),
         ).toBeInTheDocument();
+        expect(screen.queryByText(/^Welcome$/)).not.toBeInTheDocument();
+        expect(
+            screen.getByText("To get started, follow the steps below"),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText("Add your bank accounts and credit cards"),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                "Create budget categories and a monthly budget plan to follow",
+            ),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                "Record purchases and deposits and assign each one to a budget category",
+            ),
+        ).toBeInTheDocument();
         expect(
             screen.queryByRole("tablist", { name: "Home sections" }),
         ).not.toBeInTheDocument();

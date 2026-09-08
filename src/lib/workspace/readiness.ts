@@ -41,6 +41,9 @@ function createReadiness(
     };
 }
 
+const CREATE_ACCOUNT_BEFORE_TRANSACTIONS_MESSAGE =
+    "Create an account before adding any transactions";
+
 export function resolveWorkspaceReadiness(
     input: WorkspaceReadinessInput,
 ): WorkspaceReadiness {
@@ -58,7 +61,7 @@ export function resolveWorkspaceReadiness(
                 return createReadiness(
                     "accounts",
                     "empty",
-                    "Add your first account to start using the ledger.",
+                    CREATE_ACCOUNT_BEFORE_TRANSACTIONS_MESSAGE,
                 );
             }
 
@@ -118,7 +121,7 @@ export function resolveWorkspaceReadiness(
                 return createReadiness(
                     "transactions",
                     "empty",
-                    "Transactions depend on at least one saved account.",
+                    CREATE_ACCOUNT_BEFORE_TRANSACTIONS_MESSAGE,
                     {
                         href: "/accounts",
                         label: "Add account",

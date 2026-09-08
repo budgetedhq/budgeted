@@ -337,22 +337,21 @@ function DashboardSectionLink({
 
 const dashboardWelcomeSteps = [
     {
-        description:
-            "Add the places where you keep and spend money. A Cash account is ready for you to use or edit.",
+        description: "Add your bank accounts and credit cards",
         href: "/accounts",
         icon: faWallet,
         label: "Create accounts",
     },
     {
         description:
-            "Shape the starter expense categories around the way you want to plan your spending.",
+            "Create budget categories and a monthly budget plan to follow",
         href: "/global-budget",
         icon: faListCheck,
         label: "Create your budget plan",
     },
     {
         description:
-            "Record your first purchase, deposit, or transfer to bring your dashboard to life.",
+            "Record purchases and deposits and assign each one to a budget category",
         href: "/transactions",
         icon: faReceipt,
         label: "Add your first transaction",
@@ -366,9 +365,8 @@ function DashboardWelcome() {
             className={`overflow-hidden ${surfaceClassNames.panelStrong}`}
         >
             <div className="border-b border-[var(--color-border)] p-6 sm:p-8">
-                <p className={typographyClassNames.eyebrow}>Welcome</p>
                 <h1
-                    className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-3xl"
+                    className="text-2xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-3xl"
                     id="dashboard-welcome-heading"
                 >
                     Welcome to Budgeted
@@ -376,8 +374,7 @@ function DashboardWelcome() {
                 <p
                     className={`mt-3 max-w-2xl text-sm leading-6 sm:text-base ${typographyClassNames.mutedBody}`}
                 >
-                    Your ledger is ready. Follow these steps to turn it into a
-                    useful view of your money.
+                    To get started, follow the steps below
                 </p>
             </div>
 
@@ -2332,7 +2329,7 @@ export function AccountsWorkspace() {
             {readiness.status !== "ready" ? (
                 <EmptyStatePanel
                     readiness={readiness}
-                    title="Transactions need an account first."
+                    title="Add some accounts"
                 />
             ) : null}
 

@@ -15,9 +15,27 @@ describe("workspace readiness", () => {
         expect(readiness).toEqual({
             sectionId: "accounts",
             status: "empty",
-            message: "Add your first account to start using the ledger.",
+            message: "Create an account before adding any transactions",
             primaryActionHref: undefined,
             primaryActionLabel: undefined,
+        });
+    });
+
+    it("directs transactions without an account back to accounts", () => {
+        const readiness = resolveWorkspaceReadiness({
+            accountCount: 0,
+            categoryCount: 0,
+            hasReportableActivity: false,
+            sectionId: "transactions",
+            transactionCount: 0,
+        });
+
+        expect(readiness).toEqual({
+            sectionId: "transactions",
+            status: "empty",
+            message: "Create an account before adding any transactions",
+            primaryActionHref: "/accounts",
+            primaryActionLabel: "Add account",
         });
     });
 
