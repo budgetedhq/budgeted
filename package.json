@@ -22,6 +22,7 @@
     "migrate:transaction-importers": "node ./scripts/migrate-transaction-importers.mjs",
     "prepare": "node ./scripts/install-git-hooks.mjs",
     "purge:workspace-changes": "node ./scripts/purge-workspace-changes.mjs",
+    "release": "tsx ./scripts/release.ts",
     "reset:db": "node ./scripts/reset-database.mjs",
     "repair:workspace-state": "node ./scripts/repair-workspace-state.mjs",
     "seed:user": "node ./scripts/seed-user.mjs",
