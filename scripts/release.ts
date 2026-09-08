@@ -31,6 +31,11 @@ const EXPECTED_VERSION_CHANGES = [
     " M src/lib/application-version.generated.ts",
 ] as const;
 const MAX_RELEASE_ARCHIVE_BYTES = 250 * 1024 * 1024;
+const NON_PAGING_ENVIRONMENT = {
+    GH_PAGER: "cat",
+    GIT_PAGER: "cat",
+    PAGER: "cat",
+} as const;
 
 type ReleaseVersion = {
     tag: string;
@@ -169,6 +174,7 @@ function output(command: string, args: string[]): string {
     return execFileSync(command, args, {
         cwd: process.cwd(),
         encoding: "utf8",
+        env: createCommandEnvironment(),
         stdio: ["ignore", "pipe", "pipe"],
     }).trimEnd();
 }
@@ -177,6 +183,7 @@ function binaryOutput(command: string, args: string[]): Buffer {
     return execFileSync(command, args, {
         cwd: process.cwd(),
         encoding: "buffer",
+        env: createCommandEnvironment(),
         maxBuffer: MAX_RELEASE_ARCHIVE_BYTES,
         stdio: ["ignore", "pipe", "pipe"],
     });
@@ -185,12 +192,12 @@ function binaryOutput(command: string, args: string[]): Buffer {
 function run(
     command: string,
     args: string[],
-    options?: { env?: NodeJS.ProcessEnv },
+    options?: { env?: Partial<NodeJS.ProcessEnv> },
 ): void {
     console.log(`\n> ${command} ${args.join(" ")}`);
     execFileSync(command, args, {
         cwd: process.cwd(),
-        env: options?.env,
+        env: createCommandEnvironment(options?.env),
         stdio: "inherit",
     });
 }
@@ -199,9 +206,20 @@ function commandSucceeds(command: string, args: string[]): boolean {
     return (
         spawnSync(command, args, {
             cwd: process.cwd(),
+            env: createCommandEnvironment(),
             stdio: "ignore",
         }).status === 0
     );
+}
+
+export function createCommandEnvironment(
+    overrides?: Partial<NodeJS.ProcessEnv>,
+): NodeJS.ProcessEnv {
+    return {
+        ...process.env,
+        ...overrides,
+        ...NON_PAGING_ENVIRONMENT,
+    };
 }
 
 function assertCleanMain(): void {
@@ -367,14 +385,7 @@ function createReleaseCommit(release: ReleaseVersion): string {
     return output("git", ["rev-parse", "HEAD"]);
 }
 
-function publishRelease(release: ReleaseVersion): void {
-    run("git", [
-        "push",
-        "--atomic",
-        "origin",
-        RELEASE_BRANCH,
-        `refs/tags/${release.tag}`,
-    ]);
+function createGithubRelease(release: ReleaseVersion): void {
     run("gh", [
         "release",
         "create",
@@ -386,6 +397,59 @@ function publishRelease(release: ReleaseVersion): void {
         release.tag,
         "--generate-notes",
     ]);
+}
+
+function publishRelease(release: ReleaseVersion): void {
+    run("git", [
+        "push",
+        "--atomic",
+        "origin",
+        RELEASE_BRANCH,
+        `refs/tags/${release.tag}`,
+    ]);
+    createGithubRelease(release);
+}
+
+function resumeExistingRelease(release: ReleaseVersion): boolean {
+    if (
+        !commandSucceeds("git", [
+            "show-ref",
+            "--verify",
+            "--quiet",
+            `refs/tags/${release.tag}`,
+        ])
+    ) {
+        return false;
+    }
+
+    const commitSha = output("git", ["rev-list", "-n", "1", release.tag]);
+    const remoteTagExists = commandSucceeds("git", [
+        "ls-remote",
+        "--exit-code",
+        "--tags",
+        "origin",
+        `refs/tags/${release.tag}`,
+    ]);
+    if (!remoteTagExists) {
+        if (commitSha !== output("git", ["rev-parse", "HEAD"])) {
+            throw new Error(
+                `${release.tag} is local-only and does not point to HEAD; publish it manually or use a new version.`,
+            );
+        }
+        run("git", ["push", "origin", `refs/tags/${release.tag}`]);
+    }
+
+    const githubReleaseExists = commandSucceeds("gh", [
+        "api",
+        `repos/${GITHUB_REPOSITORY}/releases/tags/${release.tag}`,
+    ]);
+    if (!githubReleaseExists) {
+        createGithubRelease(release);
+    }
+
+    console.log(`\nResuming verification for ${release.tag}.`);
+    verifyPublishedRelease(release, commitSha);
+    return true;
 }
 
 function verifyPublishedRelease(release: ReleaseVersion, commitSha: string): void {
@@ -481,6 +545,12 @@ async function main(): Promise<void> {
     run("gh", ["auth", "status", "--hostname", "github.com"]);
     run("git", ["fetch", "--tags", "origin", RELEASE_BRANCH]);
     assertSynchronizedMain();
+    if (
+        currentVersion === release.version &&
+        resumeExistingRelease(release)
+    ) {
+        return;
+    }
     assertVersionCanBeReleased(release, currentVersion);
 
     console.log(

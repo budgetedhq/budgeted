@@ -45,6 +45,8 @@ Use a version greater than every existing release tag. The command requires an
 authenticated GitHub CLI session and does not deploy Budgeted to AWS.
 The production build receives a random, build-only SST `AuthSecret` binding;
 the command verifies that value was not retained in the build output.
+All child-command pagers are disabled. If a run is interrupted after its tag or
+GitHub release is created, rerun the same version to finish verification.
 
 ## Documentation
 

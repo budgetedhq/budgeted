@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
     compareReleaseVersions,
+    createCommandEnvironment,
     findFileContaining,
     getUnexpectedReleaseChanges,
     parseReleaseVersion,
@@ -45,6 +46,20 @@ describe("release script", () => {
         expect(compareReleaseVersions("0.10.0", "0.2.0")).toBeGreaterThan(0);
         expect(compareReleaseVersions("1.0.0", "0.99.99")).toBeGreaterThan(0);
         expect(compareReleaseVersions("v0.1.2", "0.1.2")).toBe(0);
+    });
+
+    it("disables pagers for every release subprocess", () => {
+        expect(
+            createCommandEnvironment({
+                GH_PAGER: "less",
+                GIT_PAGER: "more",
+                PAGER: "less",
+            }),
+        ).toMatchObject({
+            GH_PAGER: "cat",
+            GIT_PAGER: "cat",
+            PAGER: "cat",
+        });
     });
 
     it("updates only the root package version", () => {
