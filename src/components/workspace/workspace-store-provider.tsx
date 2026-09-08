@@ -48,6 +48,7 @@ import {
 import {
     APPLICATION_VERSION,
     formatApplicationVersionForDisplay,
+    isApplicationReleaseTag,
     isApplicationVersionTimestamp,
 } from "@/lib/application-version";
 import { useFeedbackToasts } from "@/components/shared/feedback-toast-provider";
@@ -400,23 +401,34 @@ class WorkspaceChannelPublisher {
     }
 }
 
-class ApplicationVersionNotifier {
+export class ApplicationVersionNotifier {
     private readonly warnedServerVersions = new Set<string>();
 
     notify(input: {
-        server: { applicationVersion?: string };
+        server: {
+            applicationReleaseTag?: string;
+            applicationVersion?: string;
+        };
         notifyWarning: ReturnType<typeof useFeedbackToasts>["notifyWarning"];
     }) {
         const serverVersion = input.server.applicationVersion;
 
         if (
-            !isApplicationVersionTimestamp(APPLICATION_VERSION) ||
+            !isApplicationVersionTimestamp(
+                APPLICATION_VERSION.buildTimestamp,
+            ) ||
             !isApplicationVersionTimestamp(serverVersion) ||
-            serverVersion === APPLICATION_VERSION ||
+            serverVersion === APPLICATION_VERSION.buildTimestamp ||
             this.warnedServerVersions.has(serverVersion)
         ) {
             return;
         }
+
+        const serverReleaseTag = isApplicationReleaseTag(
+            input.server.applicationReleaseTag,
+        )
+            ? input.server.applicationReleaseTag
+            : undefined;
 
         this.warnedServerVersions.add(serverVersion);
         input.notifyWarning({
@@ -427,8 +439,11 @@ class ApplicationVersionNotifier {
             message:
                 "A newer version of Budgeted is ready. Refresh to load the latest improvements.",
             details: [
-                `Your version: ${formatApplicationVersionForDisplay(APPLICATION_VERSION)}`,
-                `Server version: ${formatApplicationVersionForDisplay(serverVersion)}`,
+                `Current: ${formatApplicationVersionForDisplay(APPLICATION_VERSION)}`,
+                `Available: ${formatApplicationVersionForDisplay({
+                    buildTimestamp: serverVersion,
+                    releaseTag: serverReleaseTag,
+                })}`,
             ],
             title: "Update ready",
         });

@@ -53,6 +53,7 @@ export type WorkspaceKnowledge = {
      * Presentation metadata identifying the deployed application build. It is
      * deliberately excluded from workspace synchronization correctness.
      */
+    applicationReleaseTag?: string;
     applicationVersion?: string;
     changeCursor: string;
     entityCounts: WorkspaceEntityCounts;
@@ -100,6 +101,7 @@ export type WorkspaceSyncEnvelope = {
 };
 
 export type WorkspaceVersionResult = WorkspaceVersion & {
+    applicationReleaseTag?: string;
     applicationVersion?: string;
     oldestRetainedRevision: number;
 };

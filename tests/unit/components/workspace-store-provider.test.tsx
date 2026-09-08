@@ -2,10 +2,15 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+    ApplicationVersionNotifier,
     WorkspaceDataGate,
     WorkspaceStoreProvider,
     useWorkspaceStore,
 } from "@/components/workspace/workspace-store-provider";
+import {
+    APPLICATION_VERSION,
+    formatApplicationVersionForDisplay,
+} from "@/lib/application-version";
 import { createOptimisticWorkspaceUpsert } from "@/lib/workspace/optimistic-changes";
 import { createWorkspaceKnowledgeFromSnapshot } from "@/lib/workspace/snapshot-utils";
 import type {
@@ -209,6 +214,67 @@ describe("WorkspaceStoreProvider V2", () => {
         vi.restoreAllMocks();
         vi.unstubAllGlobals();
         for (const mock of Object.values(repository)) mock.mockReset();
+    });
+
+    it("reports release and build details once for each available build", () => {
+        const notifyWarning = vi.fn(() => "toast-1");
+        const notifier = new ApplicationVersionNotifier();
+        const serverVersion = "2026-08-01T13:00:00.000Z";
+        const server = {
+            applicationReleaseTag: "v0.1.3",
+            applicationVersion: serverVersion,
+        };
+
+        notifier.notify({ notifyWarning, server });
+        notifier.notify({ notifyWarning, server });
+
+        expect(notifyWarning).toHaveBeenCalledOnce();
+        expect(notifyWarning).toHaveBeenCalledWith(
+            expect.objectContaining({
+                details: [
+                    `Current: ${formatApplicationVersionForDisplay(APPLICATION_VERSION)}`,
+                    `Available: ${formatApplicationVersionForDisplay({
+                        buildTimestamp: serverVersion,
+                        releaseTag: "v0.1.3",
+                    })}`,
+                ],
+                title: "Update ready",
+            }),
+        );
+    });
+
+    it("falls back to the build timestamp for an older server", () => {
+        const notifyWarning = vi.fn(() => "toast-1");
+        const notifier = new ApplicationVersionNotifier();
+        const serverVersion = "2026-08-01T13:00:00.000Z";
+
+        notifier.notify({
+            notifyWarning,
+            server: { applicationVersion: serverVersion },
+        });
+
+        expect(notifyWarning).toHaveBeenCalledWith(
+            expect.objectContaining({
+                details: expect.arrayContaining([
+                    `Available: built ${formatApplicationVersionForDisplay(serverVersion)}`,
+                ]),
+            }),
+        );
+    });
+
+    it("does not report a matching build", () => {
+        const notifyWarning = vi.fn(() => "toast-1");
+        const notifier = new ApplicationVersionNotifier();
+
+        notifier.notify({
+            notifyWarning,
+            server: {
+                applicationReleaseTag: APPLICATION_VERSION.releaseTag,
+                applicationVersion: APPLICATION_VERSION.buildTimestamp,
+            },
+        });
+
+        expect(notifyWarning).not.toHaveBeenCalled();
     });
 
     it("renders a complete cached replica before the version request resolves", async () => {

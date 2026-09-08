@@ -31,6 +31,7 @@ import {
 
 const knowledge = {
     activeLedgerId: "ledger-1",
+    applicationReleaseTag: "v0.1.2",
     applicationVersion: "2026-07-18T12:34:56.789Z",
     changeCursor: "01HZ0000000000000000000000",
     entityCounts: {
@@ -81,6 +82,7 @@ describe("workspace sync routes", () => {
 
     it("returns the minimal V2 workspace version", async () => {
         const version = {
+            applicationReleaseTag: "v0.1.2",
             applicationVersion: "2026-08-01T12:00:00.000Z",
             cursor: "g2:r4",
             generation: 2,

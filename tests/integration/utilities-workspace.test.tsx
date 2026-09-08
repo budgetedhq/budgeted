@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({
 
 import { TransactionDialog } from "@/components/transactions/transaction-dialog";
 import {
+    AboutWorkspace,
     AutoAssignSourcesWorkspace,
     LedgerIntegrityWorkspace,
     LedgerTransferWorkspace,
@@ -33,6 +34,7 @@ import {
 } from "@/components/workspace/workspace-views";
 import { FeedbackToastProvider } from "@/components/shared/feedback-toast-provider";
 import { WorkspaceStoreProvider } from "@/components/workspace/workspace-store-provider";
+import { APPLICATION_VERSION } from "@/lib/application-version";
 import type { WorkspaceSnapshot } from "@/lib/workspace/sync-types";
 
 function makeWorkspaceSnapshot(
@@ -160,6 +162,7 @@ describe("utilities workspace", () => {
         const autoAssignLink = screen.getByRole("link", {
             name: /monthly budget funding sources/i,
         });
+        const aboutLink = screen.getByRole("link", { name: /^about/i });
         const importLink = screen.getByRole("link", {
             name: /import and export/i,
         });
@@ -178,6 +181,7 @@ describe("utilities workspace", () => {
             screen.getByRole("list", { name: "Utilities" }),
         ).toBeInTheDocument();
         expect(autoAssignLink).toHaveAttribute("data-pane-list-item", "true");
+        expect(aboutLink).toHaveAttribute("href", "/utilities/about");
         expect(autoAssignLink).toHaveClass("min-h-24", "gap-4", "p-5");
         expect(autoAssignLink).toHaveAttribute(
             "href",
@@ -207,6 +211,26 @@ describe("utilities workspace", () => {
         expect(
             screen.queryByRole("heading", { name: "Manage user accounts" }),
         ).not.toBeInTheDocument();
+    });
+
+    it("shows release details and project links on the About page", () => {
+        render(<AboutWorkspace />);
+
+        expect(
+            screen.getByRole("heading", { name: "Budgeted" }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(APPLICATION_VERSION.releaseTag),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole("link", { name: /github repository/i }),
+        ).toHaveAttribute("href", "https://github.com/deweller/budgeted");
+        expect(
+            screen.getByRole("link", { name: /releases/i }),
+        ).toHaveAttribute(
+            "href",
+            "https://github.com/deweller/budgeted/releases",
+        );
     });
 
     it("hides the user management card for normal users", () => {

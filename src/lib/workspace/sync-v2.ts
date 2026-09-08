@@ -54,6 +54,7 @@ export function workspaceKnowledgeToVersionResult(
 ): WorkspaceVersionResult {
     return {
         ...workspaceKnowledgeToVersion(knowledge),
+        applicationReleaseTag: knowledge.applicationReleaseTag,
         applicationVersion: knowledge.applicationVersion,
         oldestRetainedRevision: knowledge.oldestRetainedWorkspaceRevision,
     };

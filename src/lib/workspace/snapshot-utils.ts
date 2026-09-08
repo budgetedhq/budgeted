@@ -173,6 +173,8 @@ export function createWorkspaceKnowledgeFromSnapshot(input: {
 
     return {
         activeLedgerId: input.snapshot.activeLedgerId,
+        applicationReleaseTag:
+            input.snapshot.knowledge.applicationReleaseTag,
         applicationVersion: input.snapshot.knowledge.applicationVersion,
         changeCursor: input.changeCursor,
         entityCounts: calculateWorkspaceEntityCounts(records),

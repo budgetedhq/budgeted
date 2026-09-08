@@ -1120,7 +1120,8 @@ function createWorkspaceKnowledge(input: {
 
     return {
         activeLedgerId: input.activeLedgerId,
-        applicationVersion: APPLICATION_VERSION,
+        applicationReleaseTag: APPLICATION_VERSION.releaseTag,
+        applicationVersion: APPLICATION_VERSION.buildTimestamp,
         changeCursor: input.changeCursor,
         entityCounts:
             input.entityCounts ?? calculateWorkspaceEntityCounts(input.records!),
@@ -1242,7 +1243,8 @@ export async function buildWorkspaceVersion(
     const workspaceState = await getStoredWorkspaceState(user.activeLedgerId);
 
     return {
-        applicationVersion: APPLICATION_VERSION,
+        applicationReleaseTag: APPLICATION_VERSION.releaseTag,
+        applicationVersion: APPLICATION_VERSION.buildTimestamp,
         cursor: cursor.changeCursor,
         generation: cursor.workspaceGeneration,
         ledgerId: user.activeLedgerId,

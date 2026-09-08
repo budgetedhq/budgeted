@@ -9,6 +9,7 @@ import {
     faBoxOpen,
     faChartLine,
     faChevronRight,
+    faCircleInfo,
     faClock,
     faFileImport,
     faFolderOpen,
@@ -93,6 +94,10 @@ import {
 } from "@/lib/navigation/transaction-navigation";
 import { getCategoryTrackingHref } from "@/lib/navigation/category-tracking-routes";
 import { parseApiErrorMessage } from "@/lib/api/client-errors";
+import {
+    APPLICATION_VERSION,
+    formatApplicationVersionForDisplay,
+} from "@/lib/application-version";
 import { buildBudgetPeriodSummaryFromSnapshot } from "@/lib/workspace/budget-projector";
 import { useWorkspaceStore } from "@/components/workspace/workspace-store-provider";
 import {
@@ -2637,6 +2642,13 @@ export function UtilitiesWorkspace({
     const utilities = [
         {
             description:
+                "View release and build details, and visit the Budgeted project.",
+            href: "/utilities/about",
+            icon: faCircleInfo,
+            title: "About",
+        },
+        {
+            description:
                 "Choose the AI model, set system prompt rules, and run classification.",
             href: "/utilities/transaction-classification-settings",
             icon: faRobot,
@@ -2709,6 +2721,99 @@ export function UtilitiesWorkspace({
                     <LargeNavigationPane key={utility.href} {...utility} />
                 ))}
             </PaneList>
+        </div>
+    );
+}
+
+const aboutLinks = [
+    {
+        description: "View the source code and project overview.",
+        href: "https://github.com/deweller/budgeted",
+        title: "GitHub repository",
+    },
+    {
+        description: "Review published versions and release notes.",
+        href: "https://github.com/deweller/budgeted/releases",
+        title: "Releases",
+    },
+] as const;
+
+export function AboutWorkspace() {
+    return (
+        <div className="grid gap-6">
+            <PageHeader
+                breadcrumbs={[
+                    { href: "/dashboard", label: "Home" },
+                    { href: "/utilities", label: "Utilities" },
+                    { label: "About" },
+                ]}
+            />
+
+            <section className={`grid gap-5 p-5 ${surfaceClassNames.panelStrong}`}>
+                <div>
+                    <p className={typographyClassNames.eyebrow}>About</p>
+                    <h1 className="mt-2 text-2xl font-semibold">Budgeted</h1>
+                    <p
+                        className={`mt-2 max-w-3xl text-sm leading-6 ${typographyClassNames.mutedBody}`}
+                    >
+                        A self-hosted personal budgeting app built around
+                        reusable budget planning and a shared ledger source of
+                        truth.
+                    </p>
+                </div>
+
+                <dl className="grid gap-3 sm:grid-cols-2">
+                    <div className="border border-[var(--color-border)] bg-[var(--color-panel)] p-4">
+                        <dt className={typographyClassNames.eyebrow}>Release</dt>
+                        <dd className="mt-2 font-[family:var(--font-mono)] text-sm font-medium">
+                            {APPLICATION_VERSION.releaseTag}
+                        </dd>
+                    </div>
+                    <div className="border border-[var(--color-border)] bg-[var(--color-panel)] p-4">
+                        <dt className={typographyClassNames.eyebrow}>Build</dt>
+                        <dd className="mt-2 font-[family:var(--font-mono)] text-sm font-medium">
+                            <time
+                                dateTime={APPLICATION_VERSION.buildTimestamp}
+                                suppressHydrationWarning
+                            >
+                                {formatApplicationVersionForDisplay(
+                                    APPLICATION_VERSION.buildTimestamp,
+                                )}
+                            </time>
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section className={`grid gap-4 p-5 ${surfaceClassNames.panel}`}>
+                <div>
+                    <p className={typographyClassNames.eyebrow}>Project links</p>
+                    <h2 className="mt-2 text-lg font-semibold">
+                        Learn more about Budgeted
+                    </h2>
+                </div>
+
+                <div className="grid border border-[var(--color-border)]">
+                    {aboutLinks.map((link) => (
+                        <a
+                            className="grid gap-1 border-b border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 transition last:border-b-0 hover:bg-[var(--color-panel-elevated)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-accent-ring)]"
+                            href={link.href}
+                            key={link.href}
+                            rel="noreferrer noopener"
+                            target="_blank"
+                        >
+                            <span className="font-medium text-[var(--color-accent-contrast)]">
+                                {link.title}
+                            </span>
+                            <span
+                                className={`text-sm ${typographyClassNames.mutedBody}`}
+                            >
+                                {link.description}
+                            </span>
+                        </a>
+                    ))}
+                </div>
+            </section>
         </div>
     );
 }
