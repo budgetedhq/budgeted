@@ -10,18 +10,18 @@ system**. You budget money via categories and assign your spending transactions 
 
 ## Primary Features
 
+- A clean, well designed user interface
 - Monthly budget planning on a calendar year cycle
-- Transaction entry and categorization
 - Programmable transaction entry templates for split transactions
 - Account balance tracking and reconciliation
 - Spending and category tracking reports
-- YNAB data import
+- YNAB ledger import
 
 ## Optional Features
 
-- Plaid integration for automatic transaction importing
-- AI-assisted automatic transaction classification
-- Amazon Orders integration for purchase details and transaction matching
+- Plaid integration for automatic transaction importing from your bank or credit card
+- AI-assisted transaction classification suggestions
+- Amazon Orders integration for adding purchase details and transaction matching suggestions
 - Venmo integration for importing payment activity
 
 ## Installation
