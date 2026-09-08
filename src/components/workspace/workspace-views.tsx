@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { faGithub } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBoxOpen,
@@ -19,6 +20,7 @@ import {
     faReceipt,
     faRightLeft,
     faRobot,
+    faTag,
     faTriangleExclamation,
     faUsers,
     faV,
@@ -2724,13 +2726,13 @@ export function UtilitiesWorkspace({
 
 const aboutLinks = [
     {
-        description: "View the source code and project overview.",
         href: "https://github.com/deweller/budgeted",
+        icon: faGithub,
         title: "GitHub repository",
     },
     {
-        description: "Review published versions and release notes.",
         href: "https://github.com/deweller/budgeted/releases",
+        icon: faTag,
         title: "Releases",
     },
 ] as const;
@@ -2750,25 +2752,18 @@ export function AboutWorkspace() {
                 <div>
                     <p className={typographyClassNames.eyebrow}>About</p>
                     <h1 className="mt-2 text-2xl font-semibold">Budgeted</h1>
-                    <p
-                        className={`mt-2 max-w-3xl text-sm leading-6 ${typographyClassNames.mutedBody}`}
-                    >
-                        A self-hosted personal budgeting app built around
-                        reusable budget planning and a shared ledger source of
-                        truth.
-                    </p>
                 </div>
 
-                <dl className="grid gap-3 sm:grid-cols-2">
-                    <div className="border border-[var(--color-border)] bg-[var(--color-panel)] p-4">
+                <dl className="grid gap-4">
+                    <div className="grid gap-1">
                         <dt className={typographyClassNames.eyebrow}>Release</dt>
-                        <dd className="mt-2 font-[family:var(--font-mono)] text-sm font-medium">
+                        <dd className="font-[family:var(--font-mono)] text-sm font-medium">
                             {APPLICATION_VERSION.releaseTag}
                         </dd>
                     </div>
-                    <div className="border border-[var(--color-border)] bg-[var(--color-panel)] p-4">
+                    <div className="grid gap-1">
                         <dt className={typographyClassNames.eyebrow}>Build</dt>
-                        <dd className="mt-2 font-[family:var(--font-mono)] text-sm font-medium">
+                        <dd className="font-[family:var(--font-mono)] text-sm font-medium">
                             <time
                                 dateTime={APPLICATION_VERSION.buildTimestamp}
                                 suppressHydrationWarning
@@ -2783,33 +2778,27 @@ export function AboutWorkspace() {
             </section>
 
             <section className={`grid gap-4 p-5 ${surfaceClassNames.panel}`}>
-                <div>
-                    <p className={typographyClassNames.eyebrow}>Project links</p>
-                    <h2 className="mt-2 text-lg font-semibold">
-                        Learn more about Budgeted
-                    </h2>
-                </div>
+                <h2 className="text-lg font-semibold">Budgeted Links</h2>
 
-                <div className="grid border border-[var(--color-border)]">
+                <ul className="grid gap-3">
                     {aboutLinks.map((link) => (
-                        <a
-                            className="grid gap-1 border-b border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 transition last:border-b-0 hover:bg-[var(--color-panel-elevated)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-accent-ring)]"
-                            href={link.href}
-                            key={link.href}
-                            rel="noreferrer noopener"
-                            target="_blank"
-                        >
-                            <span className="font-medium text-[var(--color-accent-contrast)]">
-                                {link.title}
-                            </span>
-                            <span
-                                className={`text-sm ${typographyClassNames.mutedBody}`}
+                        <li key={link.href}>
+                            <a
+                                className="inline-flex items-center gap-2 font-medium text-[var(--color-accent-contrast)] transition hover:text-[var(--color-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-ring)]"
+                                href={link.href}
+                                rel="noreferrer noopener"
+                                target="_blank"
                             >
-                                {link.description}
-                            </span>
-                        </a>
+                                <FontAwesomeIcon
+                                    aria-hidden="true"
+                                    className="size-4"
+                                    icon={link.icon}
+                                />
+                                {link.title}
+                            </a>
+                        </li>
                     ))}
-                </div>
+                </ul>
             </section>
         </div>
     );
