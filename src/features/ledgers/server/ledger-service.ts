@@ -22,6 +22,7 @@ import { GLOBAL_WORKSPACE_ID } from "@/lib/workspace/scope";
 import {
     buildWorkspaceSnapshot,
     createWorkspaceStateFromRecords,
+    EXPLICIT_MUTATION_FENCE_ID,
     rebuildWorkspaceStateForGeneration,
     toWorkspaceStateRecord,
 } from "@/features/workspace/server/workspace-sync-service";
@@ -539,16 +540,20 @@ async function listLedgerScopedDeleteKeys(ledgerId: string) {
                 ExclusiveStartKey: exclusiveStartKey,
                 ProjectionExpression: "#pk, #sk, #ledgerId, #entity",
                 FilterExpression:
-                    "#ledgerId = :ledgerId AND #entity <> :ledgerEntity",
+                    "#ledgerId = :ledgerId AND #entity <> :ledgerEntity AND NOT (#entity = :workspaceMutationOperation AND #mutationId = :explicitMutationFenceId)",
                 ExpressionAttributeNames: {
                     "#entity": "__edb_e__",
                     "#pk": "pk",
                     "#sk": "sk",
                     "#ledgerId": "ledgerId",
+                    "#mutationId": "mutationId",
                 },
                 ExpressionAttributeValues: {
                     ":ledgerEntity": "ledger",
                     ":ledgerId": ledgerId,
+                    ":workspaceMutationOperation":
+                        "workspaceMutationOperation",
+                    ":explicitMutationFenceId": EXPLICIT_MUTATION_FENCE_ID,
                 },
             }),
         );

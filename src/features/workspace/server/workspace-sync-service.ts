@@ -147,7 +147,7 @@ export type WorkspaceStateUpdate = {
 
 const CHANGE_RETENTION_MS =
     WORKSPACE_CHANGE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-const EXPLICIT_MUTATION_FENCE_ID = "workspace.explicit-mutation";
+export const EXPLICIT_MUTATION_FENCE_ID = "workspace.explicit-mutation";
 const EXPLICIT_MUTATION_FENCE_STALE_MS = 2 * 60 * 1000;
 // Leave headroom for DynamoDB attribute and index overhead beneath its 400 KB limit.
 const MAX_WORKSPACE_MUTATION_JSON_BYTES = 350_000;

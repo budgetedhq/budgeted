@@ -378,6 +378,18 @@ describe("ledger service", () => {
         expect(ledgers.has(ledger.ledgerId)).toBe(false);
         expect(ownerAccount.activeLedgerId).toBe(DEFAULT_LEDGER_ID);
         expect(mocks.documentClientSend).toHaveBeenCalledTimes(2);
+        expect(mocks.documentClientSend.mock.calls[0]?.[0].input).toMatchObject({
+            FilterExpression:
+                "#ledgerId = :ledgerId AND #entity <> :ledgerEntity AND NOT (#entity = :workspaceMutationOperation AND #mutationId = :explicitMutationFenceId)",
+            ExpressionAttributeNames: {
+                "#mutationId": "mutationId",
+            },
+            ExpressionAttributeValues: {
+                ":explicitMutationFenceId": "workspace.explicit-mutation",
+                ":workspaceMutationOperation":
+                    "workspaceMutationOperation",
+            },
+        });
     });
 
     it("deletes the initial ledger like any other ledger", async () => {
