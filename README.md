@@ -39,10 +39,12 @@ Budgeted Launcher.
 
 ```bash
 pnpm run release 0.1.2
+pnpm run release 0.1.2 --notes "Fixes reconciliation totals."
 ```
 
 Use a version greater than every existing release tag. The command requires an
 authenticated GitHub CLI session and does not deploy Budgeted to AWS.
+`--notes` accepts Markdown and adds it before GitHub's generated release notes.
 The production build receives a random, build-only SST `AuthSecret` binding;
 the command verifies that value was not retained in the build output.
 All child-command pagers are disabled. If a run is interrupted after its tag or

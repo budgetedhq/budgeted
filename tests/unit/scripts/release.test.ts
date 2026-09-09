@@ -8,6 +8,7 @@ import {
     createCommandEnvironment,
     findFileContaining,
     getUnexpectedReleaseChanges,
+    parseReleaseCommand,
     parseReleaseVersion,
     updatePackageVersionSource,
     validateReleaseTree,
@@ -39,6 +40,32 @@ describe("release script", () => {
         );
         expect(() => parseReleaseVersion("v0.01.2")).toThrow(
             /stable semantic version/,
+        );
+    });
+
+    it("accepts optional Markdown release notes", () => {
+        expect(
+            parseReleaseCommand([
+                "0.1.2",
+                "--notes",
+                "## Highlights\n\n- Faster reconciliation",
+            ]),
+        ).toEqual({
+            notes: "## Highlights\n\n- Faster reconciliation",
+            release: { tag: "v0.1.2", version: "0.1.2" },
+        });
+    });
+
+    it("rejects missing, repeated, and unknown release options", () => {
+        expect(() => parseReleaseCommand([])).toThrow(/exactly one release version/);
+        expect(() => parseReleaseCommand(["0.1.2", "--notes"])).toThrow(
+            /non-empty release notes/,
+        );
+        expect(() =>
+            parseReleaseCommand(["0.1.2", "--notes", "One", "--notes", "Two"]),
+        ).toThrow(/only once/);
+        expect(() => parseReleaseCommand(["0.1.2", "--draft"])).toThrow(
+            /Unknown release option/,
         );
     });
 

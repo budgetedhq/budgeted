@@ -42,6 +42,11 @@ type ReleaseVersion = {
     version: string;
 };
 
+type ReleaseCommand = {
+    notes?: string;
+    release: ReleaseVersion;
+};
+
 type PackageIdentity = {
     name?: string;
     packageManager?: string;
@@ -60,6 +65,35 @@ export function parseReleaseVersion(value: string): ReleaseVersion {
     }
 
     return { tag: `v${match[1]}`, version: match[1] };
+}
+
+export function parseReleaseCommand(args: string[]): ReleaseCommand {
+    const [version, ...options] = args;
+    if (!version) {
+        throw new Error("Provide exactly one release version.");
+    }
+
+    const release = parseReleaseVersion(version);
+    let notes: string | undefined;
+
+    for (let index = 0; index < options.length; index += 1) {
+        const option = options[index];
+        if (option !== "--notes") {
+            throw new Error(`Unknown release option ${JSON.stringify(option)}.`);
+        }
+        if (notes !== undefined) {
+            throw new Error("Provide release notes only once.");
+        }
+
+        const value = options[index + 1];
+        if (!value || !value.trim()) {
+            throw new Error("Provide non-empty release notes after --notes.");
+        }
+        notes = value;
+        index += 1;
+    }
+
+    return { notes, release };
 }
 
 export function compareReleaseVersions(left: string, right: string): number {
@@ -385,8 +419,8 @@ function createReleaseCommit(release: ReleaseVersion): string {
     return output("git", ["rev-parse", "HEAD"]);
 }
 
-function createGithubRelease(release: ReleaseVersion): void {
-    run("gh", [
+function createGithubRelease(release: ReleaseVersion, notes?: string): void {
+    const args = [
         "release",
         "create",
         release.tag,
@@ -396,10 +430,14 @@ function createGithubRelease(release: ReleaseVersion): void {
         "--title",
         release.tag,
         "--generate-notes",
-    ]);
+    ];
+    if (notes) {
+        args.push("--notes", notes);
+    }
+    run("gh", args);
 }
 
-function publishRelease(release: ReleaseVersion): void {
+function publishRelease(release: ReleaseVersion, notes?: string): void {
     run("git", [
         "push",
         "--atomic",
@@ -407,10 +445,10 @@ function publishRelease(release: ReleaseVersion): void {
         RELEASE_BRANCH,
         `refs/tags/${release.tag}`,
     ]);
-    createGithubRelease(release);
+    createGithubRelease(release, notes);
 }
 
-function resumeExistingRelease(release: ReleaseVersion): boolean {
+function resumeExistingRelease(release: ReleaseVersion, notes?: string): boolean {
     if (
         !commandSucceeds("git", [
             "show-ref",
@@ -444,7 +482,7 @@ function resumeExistingRelease(release: ReleaseVersion): boolean {
         `repos/${GITHUB_REPOSITORY}/releases/tags/${release.tag}`,
     ]);
     if (!githubReleaseExists) {
-        createGithubRelease(release);
+        createGithubRelease(release, notes);
     }
 
     console.log(`\nResuming verification for ${release.tag}.`);
@@ -513,10 +551,11 @@ function verifyPublishedRelease(release: ReleaseVersion, commitSha: string): voi
 }
 
 function printUsage(): void {
-    console.log(`Usage: pnpm run release <version>
+    console.log(`Usage: pnpm run release <version> [--notes <markdown>]
 
 Creates a stable GitHub release from a clean, synchronized main branch.
-Example: pnpm run release 0.1.2`);
+Use --notes to add Markdown ahead of GitHub's generated notes.
+Example: pnpm run release 0.1.2 --notes "Fixes reconciliation totals."`);
 }
 
 async function main(): Promise<void> {
@@ -525,12 +564,14 @@ async function main(): Promise<void> {
         printUsage();
         return;
     }
-    if (args.length !== 1) {
+    let command: ReleaseCommand;
+    try {
+        command = parseReleaseCommand(args);
+    } catch (error) {
         printUsage();
-        throw new Error("Provide exactly one release version.");
+        throw error;
     }
-
-    const release = parseReleaseVersion(args[0]);
+    const { notes, release } = command;
     const packagePath = resolve(process.cwd(), "package.json");
     const packageSource = readFileSync(packagePath, "utf8");
     const { currentVersion } = updatePackageVersionSource(
@@ -547,7 +588,7 @@ async function main(): Promise<void> {
     assertSynchronizedMain();
     if (
         currentVersion === release.version &&
-        resumeExistingRelease(release)
+        resumeExistingRelease(release, notes)
     ) {
         return;
     }
@@ -562,7 +603,7 @@ async function main(): Promise<void> {
     assertOnlyVersionFilesChanged();
 
     const commitSha = createReleaseCommit(release);
-    publishRelease(release);
+    publishRelease(release, notes);
     verifyPublishedRelease(release, commitSha);
 }
 
