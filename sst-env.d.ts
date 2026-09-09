@@ -42,6 +42,18 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
+    "VenmoEmailArtifacts": {
+      "name": string
+      "type": "sst.aws.Bucket"
+    }
+    "VenmoEmailFailures": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
+    "VenmoEmailHandler": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
     "Web": {
       "type": "sst.aws.Nextjs"
       "url": string
