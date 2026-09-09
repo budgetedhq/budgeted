@@ -1,3 +1,4 @@
+import type { LedgerOnboarding } from "@/modules/onboarding/ledger-onboarding";
 import type { TransactionImportActivityRecord } from "@/features/transaction-importers/models/transaction-importer-contract";
 import type { AccountType } from "@/modules/accounts/account-types";
 import type { BudgetCategoryAllocationCadence } from "@/modules/budgeting/allocation-schedule";
@@ -509,6 +510,8 @@ export type WorkspacePlaidTransactionSyncRecord = {
 };
 
 export type WorkspaceLedgerRecord = {
+    onboarding?: LedgerOnboarding;
+    onboardingRevision?: number;
     createdAt: string;
     isDefault: boolean;
     ledgerId: string;

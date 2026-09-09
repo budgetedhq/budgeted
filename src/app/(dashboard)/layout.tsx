@@ -1,3 +1,4 @@
+import { LedgerSetupProvider, SetupPageProgress } from "@/components/onboarding/ledger-setup";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
@@ -44,7 +45,7 @@ export default async function DashboardLayout({
                             ledgerLabel={user.activeLedgerName}
                         />
                         <section className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-                            <WorkspaceDataGate>{children}</WorkspaceDataGate>
+                            <WorkspaceDataGate><LedgerSetupProvider><SetupPageProgress />{children}</LedgerSetupProvider></WorkspaceDataGate>
                         </section>
                     </div>
                 </div>

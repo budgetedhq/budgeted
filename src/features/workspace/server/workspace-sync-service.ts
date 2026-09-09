@@ -1,3 +1,4 @@
+import { toWorkspaceLedgerRecord } from "@/features/ledgers/models/workspace-ledger";
 import { monotonicFactory, ulid } from "ulid";
 
 import { findUserAccountById } from "@/lib/auth/user-account";
@@ -203,17 +204,7 @@ async function listWorkspaceLedgers() {
     );
 
     return sortByStringKey(
-        ledgers.map((record) => {
-            return {
-                createdAt: record.createdAt,
-                isDefault: record.isDefault,
-                ledgerId: record.ledgerId,
-                name: record.name,
-                status: record.status,
-                updatedAt: record.updatedAt,
-                workspaceId: record.workspaceId,
-            } satisfies WorkspaceLedgerRecord;
-        }),
+        ledgers.map(toWorkspaceLedgerRecord),
         (ledger) => ledger.ledgerId,
     );
 }
@@ -229,15 +220,7 @@ async function getWorkspaceLedger(ledgerId: string) {
         return null;
     }
 
-    return {
-        createdAt: record.createdAt,
-        isDefault: record.isDefault,
-        ledgerId: record.ledgerId,
-        name: record.name,
-        status: record.status,
-        updatedAt: record.updatedAt,
-        workspaceId: record.workspaceId,
-    } satisfies WorkspaceLedgerRecord;
+    return toWorkspaceLedgerRecord(record);
 }
 
 type LedgerScopedWorkspaceRecords = Omit<WorkspaceSnapshotRecords, "ledgers">;

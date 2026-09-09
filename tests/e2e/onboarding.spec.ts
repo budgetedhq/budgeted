@@ -1,0 +1,96 @@
+import { expect, test } from "@playwright/test";
+import { selectComboboxOption } from "./support/combobox";
+import { createAccount } from "./support/accounts";
+import { signInTestUser, skipIfAuthenticatedTestUserIsUnavailable } from "./support/auth";
+import { commitBudgetAssignedAmount, createGlobalBudgetCategory } from "./support/budget";
+import { createTransaction } from "./support/transactions";
+
+// Uses a named disposable ledger; it never edits the user's pre-existing ledger.
+test("new ledger setup persists reviews, completes from saved activity, and can be closed", async ({ page }) => {
+    skipIfAuthenticatedTestUserIsUnavailable(test);
+    test.setTimeout(120_000);
+    await signInTestUser(page);
+    const catalog = await page.request.get("/api/ledgers");
+    expect(catalog.ok()).toBeTruthy();
+    const { activeLedgerId: originalLedgerId } = await catalog.json();
+    const name = `E2E setup ${Date.now()}`;
+    const created = await page.request.post("/api/ledgers", { data: { name } });
+    expect(created.ok()).toBeTruthy();
+    const { ledgerId } = await created.json();
+    expect(ledgerId).toBeTruthy();
+    try {
+        await page.goto("/dashboard");
+        await expect(page.getByRole("region", { name: "Setup checklist" })).toBeVisible();
+        await createAccount(page, { name: "Setup checking", accountType: "checking", openingBalance: "100.00" });
+        await expect(page.getByRole("button", { name: "Mark this step Completed" })).toBeEnabled();
+        await page.getByRole("button", { name: "Mark this step Completed" }).click();
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await page.goto("/accounts");
+        await expect(page.getByRole("button", { name: "Add account" })).toBeVisible();
+        await expect(page.getByRole("region", { name: "Setup progress" })).toHaveCount(0);
+        await createGlobalBudgetCategory(page, { groupLabel: "Setup expenses", name: "Setup groceries" });
+        const amountLabel = "Amount for Setup groceries";
+        await page.getByRole("button", { name: amountLabel }).click();
+        await page.getByLabel(amountLabel, { exact: true }).fill("50.00");
+        const planSaved = page.waitForResponse((response) => response.url().endsWith("/api/budget/plan") && response.request().method() === "PUT");
+        await page.getByLabel(amountLabel, { exact: true }).press("Enter");
+        expect((await planSaved).ok()).toBeTruthy();
+        await expect(page.getByRole("button", { name: "Mark this step Completed" })).toBeEnabled();
+        await page.getByRole("button", { name: "Mark this step Completed" }).click();
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await createGlobalBudgetCategory(page, { groupLabel: "Setup income", name: "Setup funding" });
+        await page.goto("/dashboard");
+        await page.getByRole("link", { name: /Assign Funding Sources/ }).click();
+        await expect(page.getByRole("region", { name: "Setup progress" })).toContainText("Step 3. Assign Funding Sources");
+        await selectComboboxOption(page, "Add source category", "Setup funding");
+        await page.getByRole("button", { name: "Add source", exact: true }).click();
+        const sourcesSaved = page.waitForResponse((response) => response.url().endsWith("/api/utilities/auto-assign-sources") && response.request().method() === "PUT");
+        await page.getByRole("button", { name: "Save sources", exact: true }).click();
+        expect((await sourcesSaved).ok()).toBeTruthy();
+        await expect(page.getByRole("button", { name: "Mark this step Completed" })).toBeEnabled();
+        await page.getByRole("button", { name: "Mark this step Completed" }).click();
+        await expect(page).toHaveURL(/\/dashboard$/);
+        const monthLink = page.getByRole("link", { name: /Set up your first month/ });
+        await expect(monthLink).toHaveAttribute("href", /\/budget\?month=\d{4}-\d{2}/);
+        await monthLink.click();
+        await expect(page.getByRole("button", { name: "Assign money using your plan" })).toBeEnabled();
+        let allocationWrites = 0;
+        const countWrites = (request: import("@playwright/test").Request) => {
+            if (request.method() === "PUT" && /\/allocations$/.test(new URL(request.url()).pathname)) allocationWrites++;
+        };
+        page.on("request", countWrites);
+        await page.getByRole("button", { name: "Assign money using your plan" }).click();
+        await expect(page.getByRole("dialog")).toBeVisible();
+        await expect(page.getByRole("dialog")).toContainText("Available funding");
+        await expect(page.getByRole("dialog").getByRole("button", { name: "Assign money", exact: true })).toBeDisabled();
+        await page.getByRole("button", { name: "Cancel", exact: true }).click();
+        expect(allocationWrites).toBe(0);
+        page.off("request", countWrites);
+        const row = page.getByRole("row", { name: /Setup groceries/ });
+        await commitBudgetAssignedAmount(page, row, "Setup groceries", "50.00");
+        await expect(page.getByRole("button", { name: "Mark this step Completed" })).toBeEnabled();
+        await page.getByRole("button", { name: "Mark this step Completed" }).click();
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await createTransaction(page, { accountName: "Setup checking", categoryName: "Setup groceries", amount: "-25.00", payeeName: "Setup purchase" });
+        await expect(page.getByRole("button", { name: "Mark this step Completed" })).toBeEnabled();
+        await page.getByRole("button", { name: "Mark this step Completed" }).click();
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await expect(page.getByText("Congratulations! You have completed all the steps.")).toBeVisible();
+        await expect(page.getByRole("region", { name: "Setup checklist" }).getByText("Complete", { exact: true })).toHaveCount(5);
+        await expect(page.getByRole("tablist", { name: "Home sections" })).toHaveCount(0);
+        await page.reload();
+        await expect(page.getByText("Congratulations! You have completed all the steps.")).toBeVisible();
+        await page.getByRole("button", { name: "Go to dashboard" }).click();
+        await expect(page.getByRole("region", { name: "Setup checklist" })).toHaveCount(0);
+        await expect(page.getByRole("tablist", { name: "Home sections" })).toBeVisible();
+        await page.reload();
+        await expect(page.getByRole("tablist", { name: "Home sections" })).toBeVisible();
+        await expect(page.getByRole("region", { name: "Setup checklist" })).toHaveCount(0);
+    } finally {
+        // Leave the application on its original test ledger, then remove only our named fixture.
+        const restored = await page.request.patch(`/api/ledgers/${originalLedgerId}`);
+        expect(restored.ok()).toBeTruthy();
+        const removed = await page.request.delete(`/api/ledgers/${ledgerId}`, { data: { confirmationName: name } });
+        expect(removed.ok()).toBeTruthy();
+    }
+});

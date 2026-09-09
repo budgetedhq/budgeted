@@ -1,3 +1,4 @@
+import { createLedgerOnboarding, type LedgerOnboarding } from "@/modules/onboarding/ledger-onboarding";
 import { ulid } from "ulid";
 import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 
@@ -31,6 +32,8 @@ import type { WorkspaceSnapshotRecords } from "@/lib/workspace/sync-types";
 export const DEFAULT_LEDGER_ID = "default";
 
 export type LedgerRecord = {
+    onboarding?: LedgerOnboarding;
+    onboardingRevision?: number;
     createdAt: string;
     isDefault: boolean;
     ledgerId: string;
@@ -59,11 +62,11 @@ function compareLedgers(left: LedgerRecord, right: LedgerRecord) {
     return left.name.localeCompare(right.name);
 }
 
-export async function getLedgerRecord(ledgerId: string) {
+export async function getLedgerRecord(ledgerId: string, consistent = false) {
     const { entities } = getBudgetedSchema();
     const result = await entities.ledgers
         .get({ workspaceId: GLOBAL_WORKSPACE_ID, ledgerId })
-        .go();
+        .go({ consistent });
 
     return (result.data as LedgerRecord | undefined) ?? null;
 }
@@ -254,16 +257,13 @@ export async function ensureDefaultLedger() {
             return existing;
         }
 
-        const { entities } = getBudgetedSchema();
         const normalized = {
             ...existing,
             isDefault: false,
             updatedAt: new Date().toISOString(),
         } satisfies LedgerRecord;
 
-        await entities.ledgers.upsert(normalized).go();
-
-        return normalized;
+        return persistLedgerMetadata(normalized);
     }
 
     const now = new Date().toISOString();
@@ -278,6 +278,8 @@ export async function ensureDefaultLedger() {
         workspaceGeneration: 1,
         workspaceRevision: 0,
         workspaceSyncProtocolVersion: 2,
+        onboarding: createLedgerOnboarding(),
+        onboardingRevision: 0,
     } satisfies LedgerRecord;
 
     await persistNewLedger(
@@ -352,6 +354,8 @@ export async function createLedger(userId: string, input: LedgerInput) {
         workspaceGeneration: 1,
         workspaceRevision: 0,
         workspaceSyncProtocolVersion: 2,
+        onboarding: createLedgerOnboarding(),
+        onboardingRevision: 0,
     } satisfies LedgerRecord;
 
     await persistNewLedger(record);
@@ -377,11 +381,27 @@ export async function setActiveLedger(userId: string, ledgerId: string) {
     return ledger;
 }
 
+// Metadata edits must not overwrite setup progress saved concurrently by another session.
+async function persistLedgerMetadata(record: LedgerRecord) {
+    const { entities } = getBudgetedSchema();
+    await entities.ledgers
+        .patch({ workspaceId: record.workspaceId, ledgerId: record.ledgerId })
+        .set({
+            name: record.name,
+            status: record.status,
+            isDefault: record.isDefault,
+            updatedAt: record.updatedAt,
+        })
+        .go();
+    const saved = await getLedgerRecord(record.ledgerId, true);
+    if (!saved) throw new HttpError(404, "ledger_missing", "The selected ledger could not be found.");
+    return saved;
+}
+
 export async function updateLedger(
     ledgerId: string,
     input: LedgerUpdateInput,
 ) {
-    const { entities } = getBudgetedSchema();
     const existing = await requireLedgerRecord(ledgerId);
     const name = normalizeLedgerName(input.name);
 
@@ -393,9 +413,7 @@ export async function updateLedger(
         updatedAt: new Date().toISOString(),
     } satisfies LedgerRecord;
 
-    await entities.ledgers.upsert(record).go();
-
-    return record;
+    return persistLedgerMetadata(record);
 }
 
 export async function updateLedgerWithWorkspaceChanges(
@@ -419,7 +437,6 @@ export async function updateLedgerWithWorkspaceChanges(
 }
 
 export async function archiveLedger(ledgerId: string) {
-    const { entities } = getBudgetedSchema();
     const existing = await requireLedgerRecord(ledgerId);
 
     if (existing.status === "archived") {
@@ -432,13 +449,10 @@ export async function archiveLedger(ledgerId: string) {
         updatedAt: new Date().toISOString(),
     } satisfies LedgerRecord;
 
-    await entities.ledgers.upsert(record).go();
-
-    return record;
+    return persistLedgerMetadata(record);
 }
 
 export async function restoreLedger(ledgerId: string) {
-    const { entities } = getBudgetedSchema();
     const existing = await requireLedgerRecord(ledgerId);
 
     if (existing.status === "active") {
@@ -451,9 +465,7 @@ export async function restoreLedger(ledgerId: string) {
         updatedAt: new Date().toISOString(),
     } satisfies LedgerRecord;
 
-    await entities.ledgers.upsert(record).go();
-
-    return record;
+    return persistLedgerMetadata(record);
 }
 
 export async function setLedgerArchiveStatusWithWorkspaceChanges(input: {

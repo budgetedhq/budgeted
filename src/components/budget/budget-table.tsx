@@ -1,5 +1,8 @@
 "use client";
 
+import { BudgetSetupAllocation } from "@/components/onboarding/budget-setup-allocation";
+import { useLedgerSetup } from "@/components/onboarding/ledger-setup";
+import { formatUsd } from "@/lib/formatting/money";
 import {
     type CSSProperties,
     Fragment,
@@ -364,6 +367,7 @@ function BudgetTableContent({
     summary,
 }: BudgetTableProps) {
     const { executeWorkspaceCommand, snapshot } = useWorkspaceStore();
+    const setup = useLedgerSetup();
     const { notifyError } = useFeedbackToasts();
     const hasRenderedHeader = Boolean(renderHeader);
     const stickyBudgetHeaderRef = useRef<HTMLDivElement | null>(null);
@@ -1027,7 +1031,7 @@ function BudgetTableContent({
             : "0px",
     } as CSSProperties;
 
-    function saveAllocationInputs(allocations: AllocationWithFundingInput[]) {
+    function saveAllocationInputs(allocations: AllocationWithFundingInput[], onSettled?: (saved: boolean) => void) {
         try {
             const changes = createOptimisticAllocationChanges(allocations);
 
@@ -1046,7 +1050,9 @@ function BudgetTableContent({
                             body: JSON.stringify({ allocations }),
                         },
                     ),
+                onCommitted: () => onSettled?.(true),
                 onError: async (error) => {
+                    onSettled?.(false);
                     notifyError({
                         message: `${error instanceof Response ? await parseApiErrorMessage(error, "Unable to save allocations.") : error instanceof Error ? error.message : "Unable to save allocations."} Save failed. The latest saved data has been restored.`,
                         title: "Allocations could not be saved.",
@@ -1055,6 +1061,7 @@ function BudgetTableContent({
             });
             return true;
         } catch (error) {
+            onSettled?.(false);
             notifyError({
                 message: `${error instanceof Error ? error.message : "Unable to save allocations."} The last saved budget allocations are unchanged. Review the values and try again.`,
                 title: "Allocations could not be saved.",
@@ -1400,6 +1407,34 @@ function BudgetTableContent({
                         {allocationStatusControl}
                     </div>
                 )}
+
+                {setup?.state?.status === "active" ? (
+                    <BudgetSetupAllocation
+                        key={`${snapshot.activeLedgerId}:${summary.periodId}`}
+                        availableCents={availableAutoAssignSourceCents}
+                        requiredCents={plannedAllocationCents}
+                        rows={autoAssignPlan.allocations.map((allocation) => ({
+                            ...allocation,
+                            name: assignableCategories.find((category) => category.categoryId === allocation.categoryId)?.name ?? allocation.categoryId,
+                        }))}
+                        hasSavedAssignments={summary.hasSavedAssignments}
+                        disabled={
+                            isTransitioning ||
+                            isSubmitting ||
+                            autoAssignSourceCategoryIds.length === 0
+                        }
+                        blocker={autoAssignBlocker
+                            ? `${autoAssignBlocker.label}${autoAssignBlocker.amountCents !== undefined ? ` ${formatUsd(autoAssignBlocker.amountCents)}` : ""}${autoAssignBlocker.suffix ? ` ${autoAssignBlocker.suffix}` : ""}`
+                            : !canAutoAssignDefaults ? "Add a budget category before assigning money." : null}
+                        onConfirm={(onSettled) => {
+                            if (!canAutoAssignDefaults || summary.hasSavedAssignments || isTransitioning) {
+                                onSettled(false);
+                                return;
+                            }
+                            saveAllocationInputs(autoAssignPlan.allocations, onSettled);
+                        }}
+                    />
+                ) : null}
 
                 <div className="grid gap-3">
                     <div className="flex justify-end">

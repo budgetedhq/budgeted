@@ -17,7 +17,10 @@ const mocks = vi.hoisted(() => ({
     fetch: vi.fn(),
     refreshWorkspaceSnapshot: vi.fn(),
     routerPush: vi.fn(),
+    executeWorkspaceCommand: vi.fn().mockResolvedValue("committed"),
     snapshot: {
+        activeLedgerId: "default",
+        ledgers: [{ ledgerId: "default", onboarding: { status: "active", accountsReviewed: false, planReviewed: false, monthCompleted: false, transactionCompleted: false } }],
         budgetCategories: [
             {
                 categoryId: "dining",
@@ -134,6 +137,7 @@ vi.mock("@/components/workspace/workspace-store-provider", () => ({
         readCachedTransactions: vi.fn(),
         refreshWorkspaceSnapshot: mocks.refreshWorkspaceSnapshot,
         requestTransactionRepositoryRecovery: vi.fn(),
+        executeWorkspaceCommand: mocks.executeWorkspaceCommand,
         snapshot: mocks.snapshot,
         transactionRepositoryRevision: 0,
         transactionRepositoryState: "repositoryReady",
@@ -151,6 +155,8 @@ vi.mock(
             mocks.createOptimisticPendingClassificationChanges,
     }),
 );
+
+import { LedgerSetupProvider } from "@/components/onboarding/ledger-setup";
 
 import { DashboardWorkspace } from "@/components/workspace/workspace-views";
 
@@ -299,45 +305,38 @@ describe("dashboard workspace", () => {
         });
     });
 
-    it("welcomes a new user instead of showing reporting sections", () => {
+    it("welcomes a new user with five resumable setup steps", () => {
         const existingTransactions = mocks.snapshot.transactions.splice(0);
-
-        render(<DashboardWorkspace initialPeriodId="2026-05" />);
-
-        expect(
-            screen.getByRole("heading", { name: "Welcome to Budgeted" }),
-        ).toBeInTheDocument();
-        expect(screen.queryByText(/^Welcome$/)).not.toBeInTheDocument();
-        expect(
-            screen.getByText("To get started, follow the steps below"),
-        ).toBeInTheDocument();
-        expect(
-            screen.getByText("Add your bank accounts and credit cards"),
-        ).toBeInTheDocument();
-        expect(
-            screen.getByText(
-                "Create budget categories and a monthly budget plan to follow",
-            ),
-        ).toBeInTheDocument();
-        expect(
-            screen.getByText(
-                "Record purchases and deposits and assign each one to a budget category",
-            ),
-        ).toBeInTheDocument();
-        expect(
-            screen.queryByRole("tablist", { name: "Home sections" }),
-        ).not.toBeInTheDocument();
-        expect(
-            screen.getByRole("link", { name: /Create accounts/ }),
-        ).toHaveAttribute("href", "/accounts");
-        expect(
-            screen.getByRole("link", { name: /Create your budget plan/ }),
-        ).toHaveAttribute("href", "/global-budget");
-        expect(
-            screen.getByRole("link", { name: /Add your first transaction/ }),
-        ).toHaveAttribute("href", "/transactions");
-
+        render(<LedgerSetupProvider><DashboardWorkspace initialPeriodId="2026-05" /></LedgerSetupProvider>);
+        expect(screen.getByRole("heading", { name: "Welcome to Budgeted" })).toBeInTheDocument();
+        expect(screen.queryByRole("tablist", { name: "Home sections" })).not.toBeInTheDocument();
+        expect(screen.getByRole("link", { name: /Add accounts/ })).toHaveAttribute("href", "/accounts");
+        expect(screen.getByRole("link", { name: /Create your budget plan/ })).toHaveAttribute("href", "/global-budget");
+        expect(screen.getByRole("link", { name: /Assign Funding Sources/ })).toHaveAttribute("href", "/utilities/auto-assign");
+        expect(screen.getByRole("link", { name: /Set up your first month/ })).toHaveAttribute("href", expect.stringMatching(/^\/budget\?month=\d{4}-\d{2}$/));
+        expect(screen.getByRole("link", { name: /Add your first transaction/ })).toHaveAttribute("href", "/transactions");
+        expect(screen.getByRole("link", { name: "Close checklist" })).toBeInTheDocument();
         mocks.snapshot.transactions.push(...existingTransactions);
+    });
+
+    it("keeps completed setup in place of the dashboard until it is closed", () => {
+        const onboarding = mocks.snapshot.ledgers[0].onboarding;
+        const previousStatus = onboarding.status;
+        onboarding.status = "completed";
+        try {
+            render(<LedgerSetupProvider><DashboardWorkspace initialPeriodId="2026-05" /></LedgerSetupProvider>);
+            expect(screen.getByText("Congratulations! You have completed all the steps.")).toBeInTheDocument();
+            expect(screen.getByRole("button", { name: "Go to dashboard" })).toBeInTheDocument();
+            expect(screen.queryByRole("tablist", { name: "Home sections" })).not.toBeInTheDocument();
+        } finally {
+            onboarding.status = previousStatus;
+        }
+    });
+
+    it("retains incomplete setup above the normal dashboard after a transaction", () => {
+        render(<LedgerSetupProvider><DashboardWorkspace initialPeriodId="2026-05" /></LedgerSetupProvider>);
+        expect(screen.getByRole("region", { name: "Setup checklist" })).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "Home sections" })).toBeInTheDocument();
     });
 
     it("shows over-budget categories and ranks activity across the ledger", () => {

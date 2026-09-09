@@ -266,6 +266,7 @@ export function AccountDialog({
                             <div className="grid gap-2 text-sm font-medium text-[var(--color-ink)]">
                                 Opening balance
                                 <MoneyExpressionInput
+                                    aria-describedby="opening-balance-help"
                                     aria-label="Opening balance"
                                     required
                                     name="openingBalance"
@@ -274,16 +275,21 @@ export function AccountDialog({
                                     )}
                                     className={controlClassNames.fieldCompact}
                                 />
+                                <p id="opening-balance-help" className={`text-xs font-normal ${typographyClassNames.mutedBody}`}>
+                                    Enter the balance at your tracking start date, before any transactions you enter in Budgeted.
+                                    {selectedAccountType === "creditCard" ? " Enter an amount you owe as negative, such as -250.00. Enter a credit balance as positive." : null}
+                                </p>
                             </div>
                         ) : null}
                     </div>
 
                     <label className="grid gap-2 text-sm font-medium text-[var(--color-ink)]">
-                        Opened on
+                        Tracking start date
                         <input
                             required
                             type="date"
                             name="openedOn"
+                            aria-describedby="tracking-start-help"
                             defaultValue={
                                 effectiveAccount?.openedOn ??
                                 new Date().toISOString().slice(0, 10)
@@ -291,6 +297,10 @@ export function AccountDialog({
                             className={controlClassNames.field}
                         />
                     </label>
+
+                    <p id="tracking-start-help" className={`-mt-2 text-xs ${typographyClassNames.mutedBody}`}>
+                        Choose the date you want to start tracking this account in Budgeted.
+                    </p>
 
                     {effectiveAccount && selectedAccountTypeSupportsPlaid ? (
                         <>

@@ -1,5 +1,6 @@
 "use client";
 
+import { SetupChecklist, useLedgerSetup } from "@/components/onboarding/ledger-setup";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -24,7 +25,6 @@ import {
     faTriangleExclamation,
     faUsers,
     faV,
-    faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { AccountsTable } from "@/components/accounts/accounts-table";
@@ -337,91 +337,12 @@ function DashboardSectionLink({
     );
 }
 
-const dashboardWelcomeSteps = [
-    {
-        description: "Add your bank accounts and credit cards",
-        href: "/accounts",
-        icon: faWallet,
-        label: "Create accounts",
-    },
-    {
-        description:
-            "Create budget categories and a monthly budget plan to follow",
-        href: "/global-budget",
-        icon: faListCheck,
-        label: "Create your budget plan",
-    },
-    {
-        description:
-            "Record purchases and deposits and assign each one to a budget category",
-        href: "/transactions",
-        icon: faReceipt,
-        label: "Add your first transaction",
-    },
-] as const;
-
-function DashboardWelcome() {
-    return (
-        <section
-            aria-labelledby="dashboard-welcome-heading"
-            className={`overflow-hidden ${surfaceClassNames.panelStrong}`}
-        >
-            <div className="border-b border-[var(--color-border)] p-6 sm:p-8">
-                <h1
-                    className="text-2xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-3xl"
-                    id="dashboard-welcome-heading"
-                >
-                    Welcome to Budgeted
-                </h1>
-                <p
-                    className={`mt-3 max-w-2xl text-sm leading-6 sm:text-base ${typographyClassNames.mutedBody}`}
-                >
-                    To get started, follow the steps below
-                </p>
-            </div>
-
-            <ol className="grid divide-y divide-[var(--color-border)]">
-                {dashboardWelcomeSteps.map((step, index) => (
-                    <li key={step.href}>
-                        <Link
-                            className="group grid gap-4 p-5 transition hover:bg-[var(--color-panel-elevated)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-accent-ring)] sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:p-6"
-                            href={step.href}
-                        >
-                            <span className="flex size-10 items-center justify-center border border-[var(--color-border)] bg-[var(--color-panel)] text-[var(--color-accent-ink)]">
-                                <FontAwesomeIcon
-                                    aria-hidden="true"
-                                    className="size-4"
-                                    icon={step.icon}
-                                />
-                            </span>
-                            <span className="min-w-0">
-                                <span className="block text-base font-semibold text-[var(--color-ink)]">
-                                    {index + 1}. {step.label}
-                                </span>
-                                <span
-                                    className={`mt-1 block text-sm leading-6 ${typographyClassNames.mutedBody}`}
-                                >
-                                    {step.description}
-                                </span>
-                            </span>
-                            <FontAwesomeIcon
-                                aria-hidden="true"
-                                className="hidden size-3 text-[var(--color-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--color-accent-ink)] sm:block"
-                                icon={faChevronRight}
-                            />
-                        </Link>
-                    </li>
-                ))}
-            </ol>
-        </section>
-    );
-}
-
 export function DashboardWorkspace({
     initialPeriodId,
 }: {
     initialPeriodId: string;
 }) {
+    const setup = useLedgerSetup();
     const {
         applyOptimisticWorkspaceChanges,
         applyWorkspaceMutationResponse,
@@ -1274,11 +1195,14 @@ export function DashboardWorkspace({
         }
     }
 
-    if (!isLoadingLedgerTransactions && ledgerTransactions.length === 0) {
+    if (
+        setup?.state?.status === "completed" ||
+        (setup && (!setup.state || setup.state.status === "active") && !isLoadingLedgerTransactions && ledgerTransactions.length === 0)
+    ) {
         return (
             <div className="grid gap-8">
                 <PageHeader breadcrumbs={[{ label: "Home" }]} />
-                <DashboardWelcome />
+                <SetupChecklist />
             </div>
         );
     }
@@ -1286,6 +1210,7 @@ export function DashboardWorkspace({
     return (
         <div className="grid gap-8">
             <PageHeader breadcrumbs={[{ label: "Home" }]} />
+            <SetupChecklist />
 
             <section className="grid gap-4">
                 <div className="flex justify-center">
@@ -2608,6 +2533,7 @@ export function GlobalBudgetWorkspace() {
                 />
             ) : null}
 
+            <p className={typographyClassNames.mutedBody}>Set the amounts you normally want to budget.</p>
             <GlobalPlanEditor categories={categories} groups={groups} />
         </div>
     );
@@ -3215,6 +3141,8 @@ export function BudgetWorkspace({
                     { label: "Monthly Budget" },
                 ]}
             />
+
+            <p className={typographyClassNames.mutedBody}>Assign money to categories for this month.</p>
 
             {readiness.status !== "ready" ? (
                 <EmptyStatePanel

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
     ledgerDelete: vi.fn(),
     ledgerGet: vi.fn(),
     ledgerPut: vi.fn(),
+    ledgerPatch: vi.fn(),
     ledgerUpsert: vi.fn(),
     ledgersByStatus: vi.fn(),
     plaidTransactionSyncsBySync: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock("@/lib/db/schema", () => ({
             ledgers: {
                 delete: mocks.ledgerDelete,
                 get: mocks.ledgerGet,
+                patch: mocks.ledgerPatch,
                 put: mocks.ledgerPut,
                 upsert: mocks.ledgerUpsert,
                 query: {
@@ -76,6 +78,7 @@ vi.mock("@/lib/db/schema", () => ({
 import {
     archiveLedger,
     createLedger,
+    ensureDefaultLedger,
     DEFAULT_LEDGER_ID,
     deleteLedger,
     getActiveLedgerContext,
@@ -166,9 +169,14 @@ describe("ledger service", () => {
                 },
             };
         });
+        mocks.ledgerPatch.mockImplementation(({ ledgerId }: { ledgerId: string }) => ({
+            set: (update: Partial<LedgerRecord>) => ({
+                go: async () => { ledgers.set(ledgerId, { ...ledgers.get(ledgerId)!, ...update }); },
+            }),
+        }));
         mocks.ledgerUpsert.mockImplementation((record: LedgerRecord) => ({
             go: async () => {
-                ledgers.set(record.ledgerId, record);
+                ledgers.set(record.ledgerId, { ...ledgers.get(record.ledgerId), ...record });
             },
         }));
         mocks.ledgerDelete.mockImplementation(
@@ -220,6 +228,24 @@ describe("ledger service", () => {
 
             return { UnprocessedItems: {} };
         });
+    });
+
+    it("preserves concurrently saved setup progress during metadata edits", async () => {
+        const ledger = await ensureDefaultLedger();
+        mocks.ledgerPatch.mockImplementationOnce(({ ledgerId }: { ledgerId: string }) => ({
+            set: (update: Partial<LedgerRecord>) => ({
+                go: async () => {
+                    ledgers.set(ledgerId, {
+                        ...ledgers.get(ledgerId)!, ...update,
+                        onboarding: { ...ledger.onboarding!, accountsReviewed: true },
+                        onboardingRevision: 1,
+                    });
+                },
+            }),
+        }));
+        const updated = await updateLedger(ledger.ledgerId, { name: "Reviewed ledger" });
+        expect(updated.onboarding?.accountsReviewed).toBe(true);
+        expect(updated.onboardingRevision).toBe(1);
     });
 
     it("creates an initial global ledger and makes it active for the user", async () => {

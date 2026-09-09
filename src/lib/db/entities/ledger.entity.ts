@@ -27,6 +27,18 @@ export function createLedgerEntity(options: EntityOptions) {
                     type: ["active", "archived"] as const,
                     required: true,
                 },
+                onboardingRevision: { type: "number" },
+                onboarding: {
+                    type: "map",
+                    properties: {
+                        status: { type: ["active", "completed", "closed", "established"] as const, required: true },
+                        accountsReviewed: { type: "boolean", required: true },
+                        planReviewed: { type: "boolean", required: true },
+                        fundingSourcesCompleted: { type: "boolean" },
+                        monthCompleted: { type: "boolean", required: true },
+                        transactionCompleted: { type: "boolean", required: true },
+                    },
+                },
                 createdAt: {
                     type: "string",
                     required: true,
