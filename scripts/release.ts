@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const GITHUB_REPOSITORY = "deweller/budgeted";
+const GITHUB_REPOSITORY = "budgetedhq/budgeted";
 const RELEASE_BRANCH = "main";
 const RELEASE_FILES = [
     "package.json",

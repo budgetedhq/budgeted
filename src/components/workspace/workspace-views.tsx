@@ -2652,12 +2652,12 @@ export function UtilitiesWorkspace({
 
 const aboutLinks = [
     {
-        href: "https://github.com/deweller/budgeted",
+        href: "https://github.com/budgetedhq/budgeted",
         icon: faGithub,
         title: "GitHub repository",
     },
     {
-        href: "https://github.com/deweller/budgeted/releases",
+        href: "https://github.com/budgetedhq/budgeted/releases",
         icon: faTag,
         title: "Releases",
     },

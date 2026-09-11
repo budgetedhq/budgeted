@@ -224,12 +224,12 @@ describe("utilities workspace", () => {
         ).toBeInTheDocument();
         expect(
             screen.getByRole("link", { name: /github repository/i }),
-        ).toHaveAttribute("href", "https://github.com/deweller/budgeted");
+        ).toHaveAttribute("href", "https://github.com/budgetedhq/budgeted");
         expect(
             screen.getByRole("link", { name: /releases/i }),
         ).toHaveAttribute(
             "href",
-            "https://github.com/deweller/budgeted/releases",
+            "https://github.com/budgetedhq/budgeted/releases",
         );
     });
 
